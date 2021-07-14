@@ -53,6 +53,7 @@
 
 <link href="libs/anchor-sections-1.0.1/anchor-sections.css" rel="stylesheet" />
 <script src="libs/anchor-sections-1.0.1/anchor-sections.js"></script>
+<link href="libs/tabwid-1.0.0/tabwid.css" rel="stylesheet" />
 <script src="libs/htmlwidgets-1.5.3/htmlwidgets.js"></script>
 <script src="libs/plotly-binding-4.9.4.1/plotly.js"></script>
 <script src="libs/typedarray-0.1/typedarray.min.js"></script>
@@ -62,6 +63,70 @@
 <script src="libs/plotly-main-1.57.1/plotly-latest.min.js"></script>
 
 
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
 
 
 <link rel="stylesheet" href="style.css" type="text/css" />
@@ -160,7 +225,10 @@ a. Description of decision-making processes and how adaptation options are prior
 b. Multi stakeholder engagement process
 MITADER (coordinator), MEF (National Directorate of Planning and budgeting and Directorate of M&amp;E), MASA (DINAS, DNV,DINEA, IIAM,INDR); MOPHRH (DNGRH, Direcção De Obras Publicas); MAEF (INGC, Local Administrations), MGCAS (DINAS), Research institutions and Universities, Civil Society and Private Sector.</p>
 <ol start="3" style="list-style-type: lower-alpha">
-<li><p>National roadmap and framework</p></li>
+<li>National roadmap and framework</li>
+</ol>
+<p><img src="images/roadmap.jpg" /></p>
+<ol start="4" style="list-style-type: lower-alpha">
 <li><p>Guiding principles (science, ITK, gender, transparency and participation, etc.)</p></li>
 <li><p>Process of identification/stocktaking of desirable and available information</p></li>
 <li><p>Climate and socio economic data and information</p></li>
@@ -168,7 +236,72 @@ MITADER (coordinator), MEF (National Directorate of Planning and budgeting and D
 <li><p>Policies, strategies, plans</p></li>
 <li><p>Existing initiatives on adaptation</p></li>
 </ol>
-<p>###########3table################</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="vision-for-adaptation-for-the-country.html#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(flextable)</span>
+<span id="cb7-2"><a href="vision-for-adaptation-for-the-country.html#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(magrittr)</span>
+<span id="cb7-3"><a href="vision-for-adaptation-for-the-country.html#cb7-3" aria-hidden="true" tabindex="-1"></a>initiatives<span class="ot">&lt;-</span>readxl<span class="sc">::</span><span class="fu">read_excel</span>(<span class="st">&quot;Tables_from_NAP.xlsx&quot;</span>, </span>
+<span id="cb7-4"><a href="vision-for-adaptation-for-the-country.html#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sheet =</span> <span class="st">&quot;adpt-initiatives&quot;</span>)</span>
+<span id="cb7-5"><a href="vision-for-adaptation-for-the-country.html#cb7-5" aria-hidden="true" tabindex="-1"></a>t1<span class="ot">&lt;-</span><span class="fu">flextable</span>(initiatives,<span class="at">col_keys =</span> <span class="fu">names</span>(initiatives),</span>
+<span id="cb7-6"><a href="vision-for-adaptation-for-the-country.html#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">cwidth =</span> <span class="dv">3</span>,</span>
+<span id="cb7-7"><a href="vision-for-adaptation-for-the-country.html#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">cheight =</span> <span class="fl">0.01</span>,</span>
+<span id="cb7-8"><a href="vision-for-adaptation-for-the-country.html#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">defaults =</span> <span class="fu">list</span>(),</span>
+<span id="cb7-9"><a href="vision-for-adaptation-for-the-country.html#cb7-9" aria-hidden="true" tabindex="-1"></a>   <span class="fu">theme_booktabs</span>())</span>
+<span id="cb7-10"><a href="vision-for-adaptation-for-the-country.html#cb7-10" aria-hidden="true" tabindex="-1"></a>t2<span class="ot">&lt;-</span><span class="fu">fontsize</span>(t1,<span class="at">part =</span> <span class="st">&#39;all&#39;</span>, <span class="at">size =</span> <span class="dv">8</span>)</span>
+<span id="cb7-11"><a href="vision-for-adaptation-for-the-country.html#cb7-11" aria-hidden="true" tabindex="-1"></a>t3<span class="ot">&lt;-</span><span class="fu">border_outer</span>(t2,<span class="at">part =</span> <span class="st">&#39;all&#39;</span>, <span class="at">border =</span> <span class="cn">NULL</span>)</span>
+<span id="cb7-12"><a href="vision-for-adaptation-for-the-country.html#cb7-12" aria-hidden="true" tabindex="-1"></a>t4<span class="ot">&lt;-</span><span class="fu">border_inner</span>(t3,<span class="at">part =</span> <span class="st">&#39;all&#39;</span>, <span class="at">border =</span> <span class="cn">NULL</span>)</span>
+<span id="cb7-13"><a href="vision-for-adaptation-for-the-country.html#cb7-13" aria-hidden="true" tabindex="-1"></a>t5<span class="ot">&lt;-</span><span class="fu">bold</span>(t4,<span class="at">part=</span><span class="st">&#39;header&#39;</span>)</span>
+<span id="cb7-14"><a href="vision-for-adaptation-for-the-country.html#cb7-14" aria-hidden="true" tabindex="-1"></a>t5</span></code></pre></div>
+<template id="0b16ceba-742b-480d-bbb4-0c458c75c662"><style>
+.tabwid table{
+  border-collapse:collapse;
+  line-height:1;
+  margin-left:auto;
+  margin-right:auto;
+  border-width: 0;
+  display: table;
+  margin-top: 1.275em;
+  margin-bottom: 1.275em;
+  border-spacing: 0;
+  border-color: transparent;
+}
+.tabwid_left table{
+  margin-left:0;
+}
+.tabwid_right table{
+  margin-right:0;
+}
+.tabwid td {
+    padding: 0;
+}
+.tabwid a {
+  text-decoration: none;
+}
+.tabwid thead {
+    background-color: transparent;
+}
+.tabwid tfoot {
+    background-color: transparent;
+}
+.tabwid table tr {
+background-color: transparent;
+}
+</style><div class="tabwid"><style>.cl-f19020da{border-collapse:collapse;}.cl-f1806bcc{font-family:'Arial';font-size:8pt;font-weight:bold;font-style:normal;text-decoration:none;color:rgba(0, 0, 0, 1.00);background-color:transparent;}.cl-f1806bcd{font-family:'Arial';font-size:8pt;font-weight:normal;font-style:normal;text-decoration:none;color:rgba(0, 0, 0, 1.00);background-color:transparent;}.cl-f18092c8{margin:0;text-align:left;border-bottom: 0 solid rgba(0, 0, 0, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);padding-bottom:5pt;padding-top:5pt;padding-left:5pt;padding-right:5pt;line-height: 1;background-color:transparent;}.cl-f18092c9{margin:0;text-align:right;border-bottom: 0 solid rgba(0, 0, 0, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 0 solid rgba(0, 0, 0, 1.00);border-right: 0 solid rgba(0, 0, 0, 1.00);padding-bottom:5pt;padding-top:5pt;padding-left:5pt;padding-right:5pt;line-height: 1;background-color:transparent;}.cl-f18155f0{width:216pt;background-color:transparent;vertical-align: middle;border-bottom: 1pt solid rgba(102, 102, 102, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 1pt solid rgba(102, 102, 102, 1.00);border-right: 1pt solid rgba(102, 102, 102, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-f18155f1{width:216pt;background-color:transparent;vertical-align: middle;border-bottom: 1pt solid rgba(102, 102, 102, 1.00);border-top: 0 solid rgba(0, 0, 0, 1.00);border-left: 1pt solid rgba(102, 102, 102, 1.00);border-right: 1pt solid rgba(102, 102, 102, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-f18155f2{width:216pt;background-color:transparent;vertical-align: middle;border-bottom: 1pt solid rgba(102, 102, 102, 1.00);border-top: 1pt solid rgba(102, 102, 102, 1.00);border-left: 1pt solid rgba(102, 102, 102, 1.00);border-right: 1pt solid rgba(102, 102, 102, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}.cl-f18155f3{width:216pt;background-color:transparent;vertical-align: middle;border-bottom: 1pt solid rgba(102, 102, 102, 1.00);border-top: 1pt solid rgba(102, 102, 102, 1.00);border-left: 1pt solid rgba(102, 102, 102, 1.00);border-right: 1pt solid rgba(102, 102, 102, 1.00);margin-bottom:0;margin-top:0;margin-left:0;margin-right:0;}</style><table class='cl-f19020da'>
+<thead><tr style="overflow-wrap:break-word;"><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcc">Nome do Projecto</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcc">Objectivos</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcc">Resultados esperados</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcc">Período de Implementação</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcc">Orçamento</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcc">Fonte de financiamento</span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcc">Instituição implementadora</span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcc">Comentários</span></p></td></tr></thead><tbody><tr style="overflow-wrap:break-word;"><td class="cl-f18155f0"><p class="cl-f18092c8"><span class="cl-f1806bcd">Melhorando a Resiliência Climática em Moçambique - MERCIM</span></p></td><td class="cl-f18155f1"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f1"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f1"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f1"><p class="cl-f18092c9"><span class="cl-f1806bcd">136,115,776</span></p></td><td class="cl-f18155f1"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f0"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f0"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">LoCal</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">Escola na Machamba do Camponês</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">SUNRED</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">HELPCODE</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">ICAT</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">Conservation Areaa for Biodiversity Conservation and Development II – Additional Financing</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">FNDS</span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">O financiamento do GEF é se $23,115,776</span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">Towards Sustainable Energy for All in Mozambique: Promoting Market-Based Dissemination of Integrated Renewable Energy System for Productive Activities in Rural Area</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td></tr><tr style="overflow-wrap:break-word;"><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">Scalling Up local adaptation and climate-risk informed planning resilient livelihoods</span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f2"><p class="cl-f18092c9"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd"></span></p></td><td class="cl-f18155f3"><p class="cl-f18092c8"><span class="cl-f1806bcd">Em formulacao</span></p></td></tr></tbody></table></div></template>
+<div class="flextable-shadow-host" id="d10f78a3-00c6-472c-abb9-52071ed0cbf9"></div>
+<script>
+var dest = document.getElementById("d10f78a3-00c6-472c-abb9-52071ed0cbf9");
+var template = document.getElementById("0b16ceba-742b-480d-bbb4-0c458c75c662");
+var caption = template.content.querySelector("caption");
+if(caption) {
+  caption.style.cssText = "display:block;text-align:center;";
+  var newcapt = document.createElement("p");
+  newcapt.appendChild(caption)
+  dest.parentNode.insertBefore(newcapt, dest.previousSibling);
+}
+var fantome = dest.attachShadow({mode: 'open'});
+var templateContent = template.content;
+fantome.appendChild(templateContent);
+</script>
+
 <ol start="6" style="list-style-type: lower-alpha">
 <li>Resource mobilization for the process</li>
 </ol>
