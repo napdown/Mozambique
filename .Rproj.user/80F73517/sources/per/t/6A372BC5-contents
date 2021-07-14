@@ -1,8 +1,0 @@
-`r if (knitr::is_html_output()) '
-# References {-}
-'`
-
-References
-Ministry of the Coordination of Environmental Affairs, 2012. National Climate Change 
-…………………….
-……………………….  

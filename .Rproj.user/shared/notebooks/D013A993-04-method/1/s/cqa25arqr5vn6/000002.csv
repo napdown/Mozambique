@@ -1,4 +1,0 @@
-"0","pr245.40_cabo<-raster(""C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif"")%>%crop(cabo)%>%mask(cabo)"
-"0",""
-"0","prvar245_cabo<-prbasecabo-pr245.40_cabo"
-"0","plot(prvar245_cabo, xlab='Longitude', ylab='Latitude')"
