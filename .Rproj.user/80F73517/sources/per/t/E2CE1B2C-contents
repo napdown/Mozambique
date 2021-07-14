@@ -1,0 +1,1801 @@
+# Impacts, vulnerabilities and risks (short-, medium- and long term)
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning=FALSE)
+``` 
+
+##	Framework for national adaptation to guide assessment of vulnerabilities and risks
+  i.	Conceptual framework of vulnerability and risk at various levels: national, system level, local level, etc.  
+ICAT (Quadro fortalecido da Transparencia)
+  ii.	Boundary conditions for the assessment
+  iii.	Focus on key systems/sectors
+  iv.	Synergy with SDGs, Sendai Framework for DRR, and other relevant regional and national frameworks  
+  
+##	Baseline climate based on 1981-2010  
+
+```{r,include=FALSE}
+library(raster)
+library(rasterVis)
+library(reshape)
+library(dplyr)
+library(lubridate)
+library(tidyr)
+library(magrittr)
+library(R.utils)
+library(sf)
+library(plotly)
+library(ggplot2)
+library(sp)
+
+```
+
+```{r data-download, cache=TRUE, include=FALSE}
+
+#prurl<- "https://crudata.uea.ac.uk/cru/data/hrg/cru_ts_4.05/cruts.2103051243.v4.05/pre/cru_ts4.05.1901.2020.pre.dat.nc.gz"
+#download.file(prurl, destfile="cru_ts4.05.1901.2020.pre.dat.nc.gz")
+#gunzip("cru_ts4.05.1901.2020.pre.dat.nc.gz")
+#tmpurl<-"https://crudata.uea.ac.uk/cru/data/hrg/cru_ts_4.05/cruts.2103051243.v4.05/tmp/cru_ts4.05.1901.2020.tmp.dat.nc.gz"
+#download.file(tmpurl, destfile = "cru_ts4.05.1901.2020.tmp.dat.nc.gz")
+#gunzip("cru_ts4.05.1901.2020.tmp.dat.nc.gz")
+
+```
+
+```{r geom-extent,include=FALSE}
+moz0<-getData('GADM', country='MOZ', level=0)
+moz1<-getData('GADM', country='MOZ', level=1)
+moz2<-getData('GADM', country='MOZ', level=2)
+#getData('ISO3')
+
+mz0<-st_as_sf(moz0)
+mz1<-st_as_sf(moz1)
+mz2<-st_as_sf(moz2)
+
+plot(mz1$geometry) ############
+
+
+mzregions<-split(moz1, moz1$NAME_1)
+
+cabo<-mzregions$`Cabo Delgado`
+gaza<-mzregions$Gaza
+inbane<-mzregions$Inhambane
+manica<-mzregions$Manica
+maputo<-mzregions$Maputo
+map.city<-mzregions$`Maputo City`
+nampula<-mzregions$Nampula
+nassa<-mzregions$Nassa
+sofala<-mzregions$Sofala
+tete<-mzregions$Tete
+zambezia<-mzregions$Zambezia
+
+
+
+
+```
+
+### National
+```{r}
+
+prstack<-stack("C:\\Workspace\\RMardown_NAPS\\Open-NAPs-Data\\opennaps\\cru_ts4.05.1901.2020.pre.dat.nc")
+temp<-stack("C:\\Workspace\\RMardown_NAPS\\Open-NAPs-Data\\opennaps\\cru_ts4.05.1901.2020.tmp.dat.nc")
+
+pr_crop<-raster::crop(prstack, moz0)
+pr_mask<-raster::mask(pr_crop,moz0)
+
+
+tcrop<-raster::crop(temp, moz0)
+tmask<-raster::mask(tcrop, moz0)
+
+prdf<-as.data.frame(pr_mask, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf<-as.data.frame(tmask, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+
+Date<-substr(prdf$variable, 2,11) # extract date values from df
+prdf$Date<-Date # add date column to df
+Year<-substr(Date,1,4)
+Month<-substr(Date,6,7)
+prdf<-cbind(prdf, Year, Month)
+
+colnames(prdf)[colnames(prdf)=="value"]<-"pr"  # change column label
+
+
+tmpdf$Date<-substr(tmpdf$variable, 2,11) # extract date values from df
+tmpdf$Year<-substr(tmpdf$Date,1,4)
+tmpdf$Month<-substr(tmpdf$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(tmpdf)[colnames(tmpdf)=="value"]<-"tmean"
+
+pr_monthly<-prdf%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) # reorder the months to start plotting from july to june
+
+
+temp_monthly<-tmpdf%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Mozambique \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+
+### Cabo Delgado
+```{r}
+pr_cabo<-raster::crop(prstack, cabo)%>%raster::mask(cabo)
+temp_cabo<-raster::crop(temp, cabo)%>%raster::mask(cabo)
+
+prdf_cabo<-as.data.frame(pr_cabo, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf_cabo<-as.data.frame(temp_cabo, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+
+prdf_cabo$Date<-substr(prdf_cabo$variable, 2,11) # extract date values from df
+prdf_cabo$Year<-substr(prdf_cabo$Date,1,4)
+prdf_cabo$Month<-substr(prdf_cabo$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(prdf_cabo)[colnames(prdf_cabo)=="value"]<-"pr"
+
+
+tmpdf_cabo$Date<-substr(tmpdf_cabo$variable, 2,11) # extract date values from df
+tmpdf_cabo$Year<-substr(tmpdf_cabo$Date,1,4)
+tmpdf_cabo$Month<-substr(tmpdf_cabo$Date,6,7)
+
+
+colnames(tmpdf_cabo)[colnames(tmpdf_cabo)=="value"]<-"tmean"
+
+pr_monthly<-prdf_cabo%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) # reorder the months to start plotting from july to june
+
+
+temp_monthly<-tmpdf_cabo%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Cabo Delgado \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+### Sofala
+```{r}
+pr_sofala<-raster::crop(prstack, sofala)%>%raster::mask(sofala)
+temp_sofala<-raster::crop(temp, sofala)%>%raster::mask(sofala)
+
+prdf_sofala<-as.data.frame(pr_sofala, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf_sofala<-as.data.frame(temp_sofala, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+
+prdf_sofala$Date<-substr(prdf_sofala$variable, 2,11) 
+prdf_sofala$Year<-substr(prdf_sofala$Date,1,4)
+prdf_sofala$Month<-substr(prdf_sofala$Date,6,7)
+
+colnames(prdf_sofala)[colnames(prdf_sofala)=="value"]<-"pr"
+
+
+tmpdf_sofala$Date<-substr(tmpdf_sofala$variable, 2,11) 
+tmpdf_sofala$Year<-substr(tmpdf_sofala$Date,1,4)
+tmpdf_sofala$Month<-substr(tmpdf_sofala$Date,6,7)
+
+
+colnames(tmpdf_sofala)[colnames(tmpdf_sofala)=="value"]<-"tmean"
+
+pr_monthly<-prdf_sofala%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) #
+
+
+temp_monthly<-tmpdf_sofala%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Sofala \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+### Gaza
+```{r}
+pr_gaza<-raster::crop(prstack, gaza)%>%raster::mask(gaza)
+temp_gaza<-raster::crop(temp, gaza)%>%raster::mask(gaza)
+
+prdf_gaza<-as.data.frame(pr_gaza, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf_gaza<-as.data.frame(temp_gaza, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+
+prdf_gaza$Date<-substr(prdf_gaza$variable, 2,11) # extract date values from df
+prdf_gaza$Year<-substr(prdf_gaza$Date,1,4)
+prdf_gaza$Month<-substr(prdf_gaza$Date,6,7)
+
+
+colnames(prdf_gaza)[colnames(prdf_gaza)=="value"]<-"pr"
+
+# temperature
+tmpdf_gaza$Date<-substr(tmpdf_gaza$variable, 2,11) 
+tmpdf_gaza$Year<-substr(tmpdf_gaza$Date,1,4)
+tmpdf_gaza$Month<-substr(tmpdf_gaza$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(tmpdf_gaza)[colnames(tmpdf_gaza)=="value"]<-"tmean"
+
+pr_monthly<-prdf_gaza%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) 
+
+temp_monthly<-tmpdf_gaza%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Gaza \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+### Inhambane
+
+```{r}
+pr_inbane<-raster::crop(prstack, inbane)%>%raster::mask(inbane)
+temp_inbane<-raster::crop(temp, inbane)%>%raster::mask(inbane)
+
+prdf_inbane<-as.data.frame(pr_inbane, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf_inbane<-as.data.frame(temp_inbane, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+# precipitation
+prdf_inbane$Date<-substr(prdf_inbane$variable, 2,11) # extract date values from df
+prdf_inbane$Year<-substr(prdf_inbane$Date,1,4)
+prdf_inbane$Month<-substr(prdf_inbane$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(prdf_inbane)[colnames(prdf_inbane)=="value"]<-"pr"
+
+# temperature
+tmpdf_inbane$Date<-substr(tmpdf_inbane$variable, 2,11) # extract date values from df
+tmpdf_inbane$Year<-substr(tmpdf_inbane$Date,1,4)
+tmpdf_inbane$Month<-substr(tmpdf_inbane$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(tmpdf_inbane)[colnames(tmpdf_inbane)=="value"]<-"tmean"
+
+pr_monthly<-prdf_inbane%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) # reorder the months to start plotting from july to june
+
+#tsprmon<- ts(pr_monthly$pr)
+#plot(tsprmon)
+
+temp_monthly<-tmpdf_inbane%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Inhambane \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+### Manica
+```{r}
+pr_manica<-raster::crop(prstack, manica)%>%raster::mask(manica)
+temp_manica<-raster::crop(temp, manica)%>%raster::mask(manica)
+
+prdf_manica<-as.data.frame(pr_manica, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf_manica<-as.data.frame(temp_manica, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+# precipitation
+prdf_manica$Date<-substr(prdf_manica$variable, 2,11) # extract date values from df
+prdf_manica$Year<-substr(prdf_manica$Date,1,4)
+prdf_manica$Month<-substr(prdf_manica$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(prdf_manica)[colnames(prdf_manica)=="value"]<-"pr"
+
+# temperature
+tmpdf_manica$Date<-substr(tmpdf_manica$variable, 2,11) # extract date values from df
+tmpdf_manica$Year<-substr(tmpdf_manica$Date,1,4)
+tmpdf_manica$Month<-substr(tmpdf_manica$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(tmpdf_manica)[colnames(tmpdf_manica)=="value"]<-"tmean"
+
+pr_monthly<-prdf_manica%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) # reorder the months to start plotting from july to june
+
+#tsprmon<- ts(pr_monthly$pr)
+#plot(tsprmon)
+
+temp_monthly<-tmpdf_manica%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Manica \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+### Maputo
+```{r}
+pr_maputo<-raster::crop(prstack, maputo)%>%raster::mask(maputo)
+temp_maputo<-raster::crop(temp, maputo)%>%raster::mask(maputo)
+
+prdf_maputo<-as.data.frame(pr_maputo, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf_maputo<-as.data.frame(temp_maputo, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+# precipitation
+prdf_maputo$Date<-substr(prdf_maputo$variable, 2,11) # extract date values from df
+prdf_maputo$Year<-substr(prdf_maputo$Date,1,4)
+prdf_maputo$Month<-substr(prdf_maputo$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(prdf_maputo)[colnames(prdf_maputo)=="value"]<-"pr"
+
+# temperature
+tmpdf_maputo$Date<-substr(tmpdf_maputo$variable, 2,11) # extract date values from df
+tmpdf_maputo$Year<-substr(tmpdf_maputo$Date,1,4)
+tmpdf_maputo$Month<-substr(tmpdf_maputo$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(tmpdf_maputo)[colnames(tmpdf_maputo)=="value"]<-"tmean"
+
+pr_monthly<-prdf_maputo%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) # reorder the months to start plotting from july to june
+
+#tsprmon<- ts(pr_monthly$pr)
+#plot(tsprmon)
+
+temp_monthly<-tmpdf_maputo%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Maputo \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+###
+```{r}
+#pr_map.city<-raster::crop(prstack, map.city)%>%raster::mask(map.city)
+#temp_map.city<-raster::crop(temp, map.city)%>%raster::mask(map.city)
+
+#prdf_map.city<-as.data.frame(pr_map.city, xy=TRUE, na.rm=TRUE)%>% 
+  #melt(id.vars=c('x','y'))
+#tmpdf_map.city<-as.data.frame(temp_map.city, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+# precipitation
+#prdf_map.city$Date<-substr(prdf_map.city$variable, 2,11) # extract date values from df
+#prdf_map.city$Year<-substr(prdf_map.city$Date,1,4)
+#prdf_map.city$Month<-substr(prdf_map.city$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+#colnames(prdf_map.city)[colnames(prdf_map.city)=="value"]<-"pr"
+
+# temperature
+#tmpdf_map.city$Date<-substr(tmpdf_map.city$variable, 2,11) # extract date values from df
+#tmpdf_map.city$Year<-substr(tmpdf_map.city$Date,1,4)
+#tmpdf_map.city$Month<-substr(tmpdf_map.city$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+#colnames(tmpdf_map.city)[colnames(tmpdf_map.city)=="value"]<-"tmean"
+
+#pr_monthly<-prdf_map.city%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  #summarise(across(contains("pr"), ~mean(pr))) 
+#pr_monthly$Month<-factor(pr_monthly$Month,levels = #c('07','08','09','10','11','12','01','02','03','04','05','06')) # reorder the months to start plotting #from july to june
+
+#tsprmon<- ts(pr_monthly$pr)
+#plot(tsprmon)
+
+#temp_monthly<-tmpdf_map.city%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+#temp_monthly$Month<-factor(temp_monthly$Month, levels = #c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+#pr_tmp<-cbind(pr_monthly,temp_monthly)
+#pr_tmp<-pr_tmp[,-3]
+ 
+#ty<-list(overlaying = "y",
+  #side = "right",
+  #title = "Temperature (°C)",
+  #autotick = FALSE,
+    #  dtick = 10,
+# range=c(0,30)
+  #)
+
+#plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+ # plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+   # plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation #(mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Maputo City \n (Mean 1981-2020)', #yaxis2=ty)
+```
+
+### Nampula
+```{r}
+pr_nampula<-raster::crop(prstack, nampula)%>%raster::mask(nampula)
+temp_nampula<-raster::crop(temp, nampula)%>%raster::mask(nampula)
+
+prdf_nampula<-as.data.frame(pr_nampula, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf_nampula<-as.data.frame(temp_nampula, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+# precipitation
+prdf_nampula$Date<-substr(prdf_nampula$variable, 2,11) # extract date values from df
+prdf_nampula$Year<-substr(prdf_nampula$Date,1,4)
+prdf_nampula$Month<-substr(prdf_nampula$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(prdf_nampula)[colnames(prdf_nampula)=="value"]<-"pr"
+
+# temperature
+tmpdf_nampula$Date<-substr(tmpdf_nampula$variable, 2,11) # extract date values from df
+tmpdf_nampula$Year<-substr(tmpdf_nampula$Date,1,4)
+tmpdf_nampula$Month<-substr(tmpdf_nampula$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(tmpdf_nampula)[colnames(tmpdf_nampula)=="value"]<-"tmean"
+
+pr_monthly<-prdf_nampula%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) # reorder the months to start plotting from july to june
+
+#tsprmon<- ts(pr_monthly$pr)
+#plot(tsprmon)
+
+temp_monthly<-tmpdf_nampula%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Nampula \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+### Nassa
+```{r}
+pr_nassa<-raster::crop(prstack, nassa)%>%raster::mask(nassa)
+temp_nassa<-raster::crop(temp, nassa)%>%raster::mask(nassa)
+
+prdf_nassa<-as.data.frame(pr_nassa, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf_nassa<-as.data.frame(temp_nassa, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+# precipitation
+prdf_nassa$Date<-substr(prdf_nassa$variable, 2,11) # extract date values from df
+prdf_nassa$Year<-substr(prdf_nassa$Date,1,4)
+prdf_nassa$Month<-substr(prdf_nassa$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(prdf_nassa)[colnames(prdf_nassa)=="value"]<-"pr"
+
+# temperature
+tmpdf_nassa$Date<-substr(tmpdf_nassa$variable, 2,11) # extract date values from df
+tmpdf_nassa$Year<-substr(tmpdf_nassa$Date,1,4)
+tmpdf_nassa$Month<-substr(tmpdf_nassa$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(tmpdf_nassa)[colnames(tmpdf_nassa)=="value"]<-"tmean"
+
+pr_monthly<-prdf_nassa%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) # reorder the months to start plotting from july to june
+
+#tsprmon<- ts(pr_monthly$pr)
+#plot(tsprmon)
+
+temp_monthly<-tmpdf_nassa%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Nassa \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+### Tete
+```{r}
+pr_tete<-raster::crop(prstack, tete)%>%raster::mask(tete)
+temp_tete<-raster::crop(temp, tete)%>%raster::mask(tete)
+
+prdf_tete<-as.data.frame(pr_tete, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf_tete<-as.data.frame(temp_tete, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+# precipitation
+prdf_tete$Date<-substr(prdf_tete$variable, 2,11) # extract date values from df
+prdf_tete$Year<-substr(prdf_tete$Date,1,4)
+prdf_tete$Month<-substr(prdf_tete$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(prdf_tete)[colnames(prdf_tete)=="value"]<-"pr"
+
+# temperature
+tmpdf_tete$Date<-substr(tmpdf_tete$variable, 2,11) # extract date values from df
+tmpdf_tete$Year<-substr(tmpdf_tete$Date,1,4)
+tmpdf_tete$Month<-substr(tmpdf_tete$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(tmpdf_tete)[colnames(tmpdf_tete)=="value"]<-"tmean"
+
+pr_monthly<-prdf_tete%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) # reorder the months to start plotting from july to june
+
+#tsprmon<- ts(pr_monthly$pr)
+#plot(tsprmon)
+
+temp_monthly<-tmpdf_tete%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Tete \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+### Zambezia
+```{r}
+pr_zambezia<-raster::crop(prstack, zambezia)%>%raster::mask(zambezia)
+temp_zambezia<-raster::crop(temp, zambezia)%>%raster::mask(zambezia)
+
+prdf_zambezia<-as.data.frame(pr_zambezia, xy=TRUE, na.rm=TRUE)%>% 
+  melt(id.vars=c('x','y'))
+tmpdf_zambezia<-as.data.frame(temp_zambezia, xy=TRUE, na.rm=TRUE)%>%melt(id.vars=c('x', 'y'))
+
+# precipitation
+prdf_zambezia$Date<-substr(prdf_zambezia$variable, 2,11) # extract date values from df
+prdf_zambezia$Year<-substr(prdf_zambezia$Date,1,4)
+prdf_zambezia$Month<-substr(prdf_zambezia$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(prdf_zambezia)[colnames(prdf_zambezia)=="value"]<-"pr"
+
+# temperature
+tmpdf_zambezia$Date<-substr(tmpdf_zambezia$variable, 2,11) # extract date values from df
+tmpdf_zambezia$Year<-substr(tmpdf_zambezia$Date,1,4)
+tmpdf_zambezia$Month<-substr(tmpdf_zambezia$Date,6,7)
+#prdf<-cbind(prdf, Year, Month)
+
+colnames(tmpdf_zambezia)[colnames(tmpdf_zambezia)=="value"]<-"tmean"
+
+pr_monthly<-prdf_zambezia%>%dplyr::filter(Year>=1981)%>% group_by(Month)%>%
+  summarise(across(contains("pr"), ~mean(pr))) 
+pr_monthly$Month<-factor(pr_monthly$Month,levels = c('07','08','09','10','11','12','01','02','03','04','05','06')) # reorder the months to start plotting from july to june
+
+#tsprmon<- ts(pr_monthly$pr)
+#plot(tsprmon)
+
+temp_monthly<-tmpdf_zambezia%>%dplyr::filter(Year>=1981)%>%group_by(Month)%>%summarise('tmean'=mean(tmean))
+temp_monthly$Month<-factor(temp_monthly$Month, levels = c('07','08','09','10','11','12','01','02','03','04','05','06'))
+
+pr_tmp<-cbind(pr_monthly,temp_monthly)
+pr_tmp<-pr_tmp[,-3]
+ 
+ty<-list(overlaying = "y",
+  side = "right",
+  title = "Temperature (°C)",
+  autotick = FALSE,
+      dtick = 10,
+ range=c(0,30)
+  )
+
+plotly::plot_ly(type= 'bar', data= pr_tmp, x= ~Month, y= ~pr, name = 'Precipitation')%>%
+  plotly::add_lines(x= ~Month, y= ~tmean, mode = 'lines+markers',name= 'Temperature', yaxis='y2')%>%
+  #plotly::add_markers(x= ~Month, y= ~tmean, pch=1,color='#D21919', yaxis='y2', name='')%>%
+    plotly::layout(legend=list(orientation='h', y=-0.18,x=0.3), yaxis=list(title='Precipitation (mm)',showticklables=F, range=c(0,600)),width=600, height=500, title='Zambezia \n (Mean 1981-2020)', yaxis2=ty)
+```
+
+
+## Temperature Anomaly
+```{r}
+library(tidyr)
+library(dplyr)
+library(magrittr)
+# mean temp 1901-2019
+TEMP <- read.table("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/Mozambique-NAP/CRU.CY.4.04.TMP.txt", header=TRUE, quote="\"", stringsAsFactors=TRUE)
+
+mtemp<-TEMP[,c(-1,-14,-15,-16,-17,-18)]
+anntemp<-TEMP[,c(1,18)]
+
+# base 1961-1990
+base81<-subset(anntemp, YEAR>1960)%>%subset( YEAR<1991)
+
+meanbase<-sum(base81$ANN)/30
+  
+anntemp$anomaly<-anntemp$ANN-meanbase
+
+anntemp$pos<-anntemp$anomaly >=0
+
+#anntemp%>%dplyr::filter(YEAR>1950)%>%
+#plotly::plot_ly(type = 'bar', x=~YEAR, y=~anomaly, color =~pos)%>%
+  #plotly::layout(yaxis=list(title='Temperature Anomaly (°C)',title='Mozambique \n (Mean 1901-2020)'))
+
+library(ggplot2)
+anntemp%>%dplyr::filter(YEAR>1950)%>%
+ggplot()+
+  geom_col(aes(x = YEAR, y = anomaly, fill = pos),position = "identity", colour = "white", size = 0.01) +
+  labs(x='Year', y= 'Temperature Anomaly (°C)')+
+  ggtitle('   Mozambique \n(Base: 1961-1990)')+
+  scale_fill_manual(values = c('blue', 'red'), guide = 'none')
+
+```
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(magrittr)
+# mean temp 1901-2019
+TEMP <- read.table("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/Mozambique-NAP/CRU.CY.4.04.TMP.txt", header=TRUE, quote="\"", stringsAsFactors=TRUE)
+
+mtemp<-TEMP[,c(-1,-14,-15,-16,-17,-18)]
+anntemp<-TEMP[,c(1,18)]
+
+# base 1981-2010
+base81<-subset(anntemp, YEAR>1980)%>%subset( YEAR<2011)
+
+meanbase<-sum(base81$ANN)/30
+  
+anntemp$anomaly<-anntemp$ANN-meanbase
+
+anntemp$pos<-anntemp$anomaly >=0
+
+anntemp%>%dplyr::filter(YEAR>1950)%>%
+ggplot()+
+  geom_col(aes(x = YEAR, y = anomaly, fill = pos),position = "identity", colour = "white", size = 0.01) + ggtitle('   Mozambique \n(Base: 1981-2010)')+
+  labs(x='Year', y= 'Temperature Anomaly (°C)')+
+  scale_fill_manual(values = c('blue', 'red'), guide = "none")
+
+```
+
+##	Current impacts, vulnerabilities and risks  
+
+Dados históricos sobre eventos extremos mostram que três riscos relacionados com o clima são mais prováveis de ocorrer em Moçambique, a saber, ciclones tropicais, inundações e secas. Estes eventos são frequentemente associados a danos socioeconómicos, traduzidos em perdas de vidas humanas, sofrimento humano, perda de bens, destruição de infraestruturas críticas (ex. unidades sanitárias, escolas, vias de acesso, etc.) e outras perdas indirectas.
+Uma análise de dados no período de 1980 a 2019 mostra que Moçambique foi afectado por 21 ciclones tropicais, 20 eventos de inundação e 12 secas (figura 3.1). Isto significa que em média, o país é afectado por um ciclone tropical ou um evento de inundação a cada dois anos e um evento de seca a cada três anos. Os ciclones tropicais e os eventos de inundações representam cerca de 77% do total dos eventos ocorridos no período em análise. 
+
+![Figura 3.1:-Número total de eventos extremos ocorridos em Moçambique, entre 1980 – 2019](images/numero_desastres.png)  
+
+
+
+(Fonte: produzido com base nos dados do DeSinventar e relatórios do INGC de balanço da época chuvosa).
+
+Uma das questões cruciais da actualidade é se existe alguma evidência do aumento ou não dos eventos extremos causadores de desastres. Através de uma análise da tendência dos eventos registados nas últimas quatro décadas (1980 – 2019), nota-se que o número de eventos que assolaram o país aumentou, significativamente, desde a década 2000 (figura 3.2). Desde a década de (2000-2010) até à corrente, o número de ciclones concorre com o número de eventos de inundação, apesar do abrandamento dos eventos de seca. 
+Tomando em conta que os ciclones tropicais são frequentemente associados a eventos de chuvas fortes que podem contribuir com uma proporção significativa da precipitação em um período muito curto que por sua vez causam inundações em várias regiões do país, com sérias implicações para a saúde das comunidades, o agravamento destes fenómenos nas últimas décadas deve merecer uma atenção especial para as autoridades da saúde e não só.
+
+
+![Figura 3.2: Tendência do número de eventos extremos ocorridos entre 1980 e 2019.](images/eventos_extremos.png)  
+
+
+O impacto directo destes eventos é frequentemente expresso pelo número da perda de vidas humanas, pessoas afectadas através da perda de bens pessoais e meios de subsistência, destruição de infra-estruturas críticas do país tais como estradas, pontes, sistema de abastecimento de água, escolas, hospitais, assim como a eclosão de doenças transmitidas pela água (ex. malária, cólera, diarreias etc.). Todavia, a falta de registos sistemáticos e homogéneos dos eventos e seus impactos e, por um lado, a persistência em se considerar apenas os desastres de grandes proporções e elevado impacto num curto espaço de tempo, têm ocultado milhares de desastres de pequena e média escala que ocorrem todos os anos no país. Consequentemente, Moçambique não conhece o valor real das perdas económicas directas e ou indirectas associadas a estes eventos.
+
+A Tabela 3.1 apresenta o impacto das mudanças climáticas na dimensão humana. Relativamente aos impactos económicos, estes são apresentados nos respectivos sectores onde é feita a análise da vulnerabilidade.
+
+```{r}
+library(flextable)
+library(magrittr)
+impacts<-readxl::read_excel("Tables_from_NAP.xlsx", 
+    sheet = "cc-impacts")
+t1<-flextable(impacts,col_keys = names(impacts),
+  cwidth = 3,
+  cheight = 0.01,
+  defaults = list(),
+   theme_booktabs())
+t2<-fontsize(t1,part = 'all', size = 8)
+t3<-border_outer(t2,part = 'all', border = NULL)
+t4<-border_inner(t3,part = 'all', border = NULL)
+t5<-bold(t4,part='header')
+t5
+```
+
+
+Os eventos climáticos extremos ocorridos em Moçambique em 2000 e nas épocas chuvosas de 2005/6 a 2017/18 afectaram cerca de 4,074,606 pessoas, causaram ferimentos a 885 pessoas e 1,114 óbitos. Cerca de 50% de afectados, feridos e óbitos resultaram da ocorrência do Ciclone HUDAH, e importa referir que os ciclones tropicais são eventos que provocam maiores impactos na dimensão humana.
+Estes impactos constituem um retrocesso no processo de redução da pobreza que é a prioridade dos Governos dos países em vias de desenvolvimento e aumentam a dependência pela ajuda internacional. Neste contexto, é de alta prioridade a avaliação da vulnerabilidade dos sectores sociais e económicos mais importantes e a identificação de medidas de adaptação.
+
+__Agricultura__
+
+De acordo com os balanços das épocas chuvosas, o sector de agricultura é vulnerável aos eventos de estiagem e secas, cheias e inundações, ventos fortes, ciclones tropicais incluindo pragas (vide a Tabela 3.3). Estes eventos resultam em áreas de culturas afectadas e/ou perdidas; morte e/ou desaparecimento de animais domésticos, com destaque para o gado bovino, caprino, suíno, ovino e aves; destruição de infra-estruturas agrárias e de maneio dos animais; perda de áreas de pastagem, afectando os agricultores e suas famílias.
+Tabela 3.3: Impacto das mudanças climáticas na agricultura
+
+
+```{r}
+library(flextable)
+library(magrittr)
+agri<-readxl::read_excel("Tables_from_NAP.xlsx", 
+    sheet = "agriculture")
+t1<-flextable(agri,col_keys = names(agri),
+  cwidth = 3,
+  cheight = 0.01,
+  defaults = list(),
+   theme_booktabs())
+t2<-fontsize(t1,part = 'all', size = 8)
+t3<-border_outer(t2,part = 'all', border = NULL)
+t4<-border_inner(t3,part = 'all', border = NULL)
+t5<-bold(t4,part='header')
+t5
+```
+
+
+_Fonte: Balanços das épocas chuvosas do período de 2011-12 a 2017-18_
+
+Os eventos climáticos ocorridos no país entre as épocas chuvosas de 2011-12 a 2017-18 afectaram cerca de 1,384,677 ha de culturas, dos quais cerca de 733,270 ha foram perdidas. Os eventos que afectaram maior área de culturas foram a depressão tropical Dando e o ciclone tropical Funso, ocorridos na época chuvosa 2011-12, enquanto a maior perda de culturas ocorreu na sequência das inundações de 2012-2013.
+Para além de áreas afectadas e/ou perdidas de culturas, os eventos climáticos ocorridos no país causaram morte de 315 cabeças de gado bovino, 2,707 de caprinos, 254 suínos, 111 ovinos e 132 aves. Em termos de equipamentos, 9 represas e 113 motobombas foram danificados. Estas perdas e destruições afectaram 278,394 produtores e cerca de 25 mil famílias.   
+Os eventos que mais perdas e destruições causam no sector de agricultura são os relacionados com excessos de chuvas e inundações e os ciclones tropicais. Contudo, quando ocorre uma estiagem, normalmente, a área afectada é igual a perdida.  
+É importante sublinhar também que além da vulnerabilidade biofísica associada à ocorrência de eventos climáticos extremos, os níveis de tecnologia adoptados por grande parte dos produtores não correspondem às exigências das variedades seleccionadas, devido à fraca capacidade financeira para aquisição de insumos agrícolas, o que também contribui para a baixa produção e produtividade.   
+Para a avaliação da vulnerabilidade do sector agrícola às mudanças climáticas foi seleccionada a cultura de milho produzida em sequeiro, no distrito de Chókwé, província de Gaza. A avaliação consistiu na análise da relação entre o rendimento da cultura e as variáveis climáticas (precipitação e temperatura) e feita a projecção das variáveis climáticas e seus possíveis impactos nos rendimentos.
+
+
+Pecuária
+
+
+Tabela 3.4: Impactos dos eventos extremos na pecuária
+```{r}
+library(flextable)
+library(magrittr)
+livestock<-readxl::read_excel("Tables_from_NAP.xlsx", 
+    sheet = "livestock")
+t1<-flextable(livestock,col_keys = names(livestock),
+  cwidth = 3,
+  cheight = 0.01,
+  defaults = list(),
+   theme_booktabs())
+t2<-fontsize(t1,part = 'all', size = 8)
+t3<-border_outer(t2,part = 'all', border = NULL)
+t4<-border_inner(t3,part = 'all', border = NULL)
+t5<-bold(t4,part='header')
+t5
+```
+
+
+##	Projected future impacts, vulnerabilities and risks  
+
+Em Moçambique, alguns estudos apontam para um aumento significativo para a temperatura, sendo que a temperatura média anual está projectada para aumentar entre 1.0 a 2.8 °C por volta de 2060 e entre 1.4 a 4.6 ° C em 2090 (INGC, 2009; Mcsweeney et al., 2010) (igura 1.10). A taxa projectada de aquecimento será mais rápida nas regiões interiores de Moçambique do que nas áreas mais próximas da costa. Todas as projecções indicam aumentos substanciais na frequência de dias e noites considerados "quentes" no clima actual. Sendo que este aumento estará entre 17 e 35% de dias por ano, por volta de 2060 e entre 20 e 53% de dias por ano em 2090. As mesmas projecções indicam também uma redução na frequência de dias e noites consideradas "frias" no clima actual.
+ 
+### Temperature
+
+![Figura 1.10: Tendências da temperatura média anual em Moçambique para o passado recente entre 1960 e 2006 (linha em preto) e o futuro projectado para três cenários de emissões (linhas coloridas). As barras coloridas no lado direito indicam os diferentes cenários usados nas simulações (A2, A1B e B1) assim como as faixas de incertezas nas projecções de climas médios por volta de 2090 – 2100 (Adaptado de Mcsweeney et al., 2010).](images/temp_anomaly.png)  
+
+
+```{r tmean-base, include=FALSE}
+wc.tmean<-getData("worldclim", var='tmean', res=2.5)
+gain(wc.tmean)<-0.1
+moz.tmean<-crop(wc.tmean,moz0)%>%raster::mask(moz0)
+basemn<-sum(moz.tmean)/12
+#plot(basemn)
+
+#admin1
+cabo.tmean<-raster::crop(wc.tmean,cabo)%>%raster::mask(cabo)
+basecabo<-sum(cabo.tmean)/12
+
+sofala.tmean<-raster::crop(wc.tmean,sofala)%>%raster::mask(sofala)
+basesofala<-sum(sofala.tmean)/12
+
+gaza.tmean<-raster::crop(wc.tmean,gaza)%>%raster::mask(gaza)
+basegaza<-sum(gaza.tmean)/12
+
+inbane.tmean<-raster::crop(wc.tmean,inbane)%>%raster::mask(inbane)
+baseinbane<-sum(inbane.tmean)/12
+
+manica.tmean<-raster::crop(wc.tmean,manica)%>%raster::mask(manica)
+basemanica<-sum(manica.tmean)/12
+
+maputo.tmean<-raster::crop(wc.tmean,maputo)%>%raster::mask(maputo)
+basemaputo<-sum(maputo.tmean)/12
+
+map.city.tmean<-raster::crop(wc.tmean,map.city)%>%raster::mask(map.city)
+basemap.city<-sum(map.city.tmean)/12
+
+nampula.tmean<-raster::crop(wc.tmean,nampula)%>%raster::mask(nampula)
+basenampula<-sum(nampula.tmean)/12
+
+nassa.tmean<-raster::crop(wc.tmean,nassa)%>%raster::mask(nassa)
+basenassa<-sum(nassa.tmean)/12
+
+tete.tmean<-raster::crop(wc.tmean,tete)%>%raster::mask(tete)
+basetete<-sum(tete.tmean)/12
+
+zambezia.tmean<-raster::crop(wc.tmean,zambezia)%>%raster::mask(zambezia)
+basezambezia<-sum(zambezia.tmean)/12
+
+```
+
+```{r ssp126}
+#tn126.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin126/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+#tx126.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax126/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+#tmn126.40<-(tn126.40+tx126.40)/2
+#plot(tmn126.40)
+#tvar126<-basemn-tmn126.40
+#plot(tvar126)
+```
+
+#### ssp245
+```{r ssp245-national}
+tn245.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+tx245.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+tmn245.40<-(tn245.40+tx245.40)/2
+#plot(tmn245.40)
+tvar245<-basemn-tmn245.40
+
+plot(tvar245, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=T)
+
+
+```
+
+Fig. 4a. Mean temperature change (C) for Mozambique for 2020 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model
+
+
+```{r ssp245-cabo}
+tn245.40_cabo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(cabo)%>%raster::mask(cabo)
+tx245.40_cabo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(cabo)%>%raster::mask(cabo)
+
+#gain(tn245.40)<-0.1
+#gain(tx245.40)<-0.1
+
+tmn245.40_cabo<-(tn245.40_cabo+tx245.40_cabo)/2
+#plot(tmn245.40_cabo)
+tvar245_cabo<-basecabo-tmn245.40_cabo
+
+plot(tvar245_cabo, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Cabo Delgado for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+```{r ssp245-sofala}
+tn245.40_sofala<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(sofala)%>%raster::mask(sofala)
+tx245.40_sofala<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(sofala)%>%raster::mask(sofala)
+tmn245.40_sofala<-(tn245.40_sofala+tx245.40_sofala)/2
+#plot(tmn245.40_sofala)
+tvar245_sofala<-basesofala-tmn245.40_sofala
+
+plot(tvar245_sofala, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+
+```
+
+Fig. xx Mean temperature change (C) for maputo for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model  
+
+```{r ssp245-gaza}
+tn245.40_gaza<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(gaza)%>%raster::mask(gaza)
+tx245.40_gaza<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(gaza)%>%raster::mask(gaza)
+tmn245.40_gaza<-(tn245.40_gaza+tx245.40_gaza)/2
+#plot(tmn245.40_gaza)
+tvar245_gaza<-basegaza-tmn245.40_gaza
+
+plot(tvar245_gaza, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Gaza for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+
+```{r ssp245-inbane}
+tn245.40_inbane<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(inbane)%>%raster::mask(inbane)
+tx245.40_inbane<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(inbane)%>%raster::mask(inbane)
+tmn245.40_inbane<-(tn245.40_inbane+tx245.40_inbane)/2
+#plot(tmn245.40_inbane)
+tvar245_inbane<-baseinbane-tmn245.40_inbane
+
+plot(tvar245_inbane, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Inhambane for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+
+```{r ssp245-manica}
+tn245.40_manica<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(manica)%>%raster::mask(manica)
+tx245.40_manica<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(manica)%>%raster::mask(manica)
+tmn245.40_manica<-(tn245.40_manica+tx245.40_manica)/2
+#plot(tmn245.40_manica)
+tvar245_manica<-basemanica-tmn245.40_manica
+
+plot(tvar245_manica, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Manica for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+
+```{r ssp245-maputo}
+tn245.40_maputo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(maputo)%>%raster::mask(maputo)
+tx245.40_maputo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(maputo)%>%raster::mask(maputo)
+tmn245.40_maputo<-(tn245.40_maputo+tx245.40_maputo)/2
+#plot(tmn245.40_maputo)
+tvar245_maputo<-basemaputo-tmn245.40_maputo
+
+plot(tvar245_maputo, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Maputo for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+
+```{r ssp245-map.city}
+tn245.40_map.city<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(map.city)%>%raster::mask(map.city)
+tx245.40_map.city<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(map.city)%>%raster::mask(map.city)
+tmn245.40_map.city<-(tn245.40_map.city+tx245.40_map.city)/2
+#plot(tmn245.40_map.city)
+tvar245_map.city<-basemap.city-tmn245.40_map.city
+
+plot(tvar245_map.city, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for  Maputo City for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+
+```{r ssp245-nampula}
+tn245.40_nampula<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(nampula)%>%raster::mask(nampula)
+tx245.40_nampula<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(nampula)%>%raster::mask(nampula)
+tmn245.40_nampula<-(tn245.40_nampula+tx245.40_nampula)/2
+#plot(tmn245.40_nampula)
+tvar245_nampula<-basenampula-tmn245.40_nampula
+
+plot(tvar245_nampula, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Nampula for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+```{r ssp245-nassa}
+tn245.40_nassa<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(nassa)%>%raster::mask(nassa)
+tx245.40_nassa<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(nassa)%>%raster::mask(nassa)
+tmn245.40_nassa<-(tn245.40_nassa+tx245.40_nassa)/2
+#plot(tmn245.40_nassa)
+tvar245_nassa<-basenassa-tmn245.40_nassa
+
+plot(tvar245_nassa, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Nassa for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+```{r ssp245-tete}
+tn245.40_tete<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(tete)%>%raster::mask(tete)
+tx245.40_tete<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(tete)%>%raster::mask(tete)
+tmn245.40_tete<-(tn245.40_tete+tx245.40_tete)/2
+#plot(tmn245.40_tete)
+tvar245_tete<-basetete-tmn245.40_tete
+
+plot(tvar245_tete, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Tete for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+```{r ssp245-zambezia}
+tn245.40_zambezia<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin245/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(zambezia)%>%raster::mask(zambezia)
+tx245.40_zambezia<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax245/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(zambezia)%>%raster::mask(zambezia)
+tmn245.40_zambezia<-(tn245.40_zambezia+tx245.40_zambezia)/2
+#plot(tmn245.40_zambezia)
+tvar245_zambezia<-basezambezia-tmn245.40_zambezia
+
+plot(tvar245_zambezia, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Zambezia for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+```{r ssp370}
+#tn370.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin370/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp370_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+#tx370.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax370/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp370_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+#tmn370.40<-(tn370.40+tx370.40)/2
+#plot(tmn370.40)
+#tvar370<-basemn-tmn370.40
+#plot(tvar370)
+```
+
+#### ssp585
+
+```{r ssp585}
+tn585.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+tx585.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+tmn585.40<-(tn585.40+tx585.40)/2
+tvar585<-basemn-tmn585.40
+
+plot(tvar585, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=T)
+```
+
+Fig. 4b. Mean temperature change (C) for Mozambique for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (585). BCC-CSM2-MR Model. 
+
+```{r ssp585-cabo}
+tn585.40_cabo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(cabo)%>%raster::mask(cabo)
+tx585.40_cabo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(cabo)%>%raster::mask(cabo)
+tmn585.40_cabo<-(tn585.40_cabo+tx585.40_cabo)/2
+tvar585_cabo<-basecabo-tmn585.40_cabo
+
+plot(tvar585_cabo, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+  
+Fig. 4b. Mean temperature change (C) for Cabo Delgado for 2020 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (585). BCC-CSM2-MR Model.
+
+```{r ssp585-sofala}
+tn585.40_sofala<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(sofala)%>%raster::mask(sofala)
+tx585.40_sofala<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(sofala)%>%raster::mask(sofala)
+
+tmn585.40_sofala<-(tn585.40_sofala+tx585.40_sofala)/2
+tvar585_sofala<-basesofala-tmn585.40_sofala
+
+plot(tvar585_sofala, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. 4b. Mean temperature change (C) for maputo for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (585). BCC-CSM2-MR Model.  
+
+
+```{r ssp585-gaza}
+tn585.40_gaza<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(gaza)%>%raster::mask(gaza)
+tx585.40_gaza<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(gaza)%>%raster::mask(gaza)
+tmn585.40_gaza<-(tn585.40_gaza+tx585.40_gaza)/2
+#plot(tmn585.40_gaza)
+tvar585_gaza<-basegaza-tmn585.40_gaza
+
+plot(tvar585_gaza, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Gaza for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+
+```{r ssp585-inbane}
+tn585.40_inbane<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(inbane)%>%raster::mask(inbane)
+tx585.40_inbane<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(inbane)%>%raster::mask(inbane)
+tmn585.40_inbane<-(tn585.40_inbane+tx585.40_inbane)/2
+#plot(tmn585.40_inbane)
+tvar585_inbane<-baseinbane-tmn585.40_inbane
+
+plot(tvar585_inbane, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Inhambane for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+
+```{r ssp585-manica}
+tn585.40_manica<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(manica)%>%raster::mask(manica)
+tx585.40_manica<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(manica)%>%raster::mask(manica)
+tmn585.40_manica<-(tn585.40_manica+tx585.40_manica)/2
+#plot(tmn585.40_manica)
+tvar585_manica<-basemanica-tmn585.40_manica
+
+plot(tvar585_manica, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Manica for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+
+```{r ssp585-maputo}
+tn585.40_maputo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(maputo)%>%raster::mask(maputo)
+tx585.40_maputo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(maputo)%>%raster::mask(maputo)
+tmn585.40_maputo<-(tn585.40_maputo+tx585.40_maputo)/2
+#plot(tmn585.40_maputo)
+tvar585_maputo<-basemaputo-tmn585.40_maputo
+
+plot(tvar585_maputo, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Maputo for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+
+```{r ssp585-map.city}
+tn585.40_map.city<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(map.city)%>%raster::mask(map.city)
+tx585.40_map.city<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(map.city)%>%raster::mask(map.city)
+tmn585.40_map.city<-(tn585.40_map.city+tx585.40_map.city)/2
+#plot(tmn585.40_map.city)
+tvar585_map.city<-basemap.city-tmn585.40_map.city
+
+plot(tvar585_map.city, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for  Maputo City for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+
+```{r ssp585-nampula}
+tn585.40_nampula<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(nampula)%>%raster::mask(nampula)
+tx585.40_nampula<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(nampula)%>%raster::mask(nampula)
+tmn585.40_nampula<-(tn585.40_nampula+tx585.40_nampula)/2
+#plot(tmn585.40_nampula)
+tvar585_nampula<-basenampula-tmn585.40_nampula
+
+plot(tvar585_nampula, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Nampula for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+```{r ssp585-nassa}
+tn585.40_nassa<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(nassa)%>%raster::mask(nassa)
+tx585.40_nassa<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(nassa)%>%raster::mask(nassa)
+tmn585.40_nassa<-(tn585.40_nassa+tx585.40_nassa)/2
+#plot(tmn585.40_nassa)
+tvar585_nassa<-basenassa-tmn585.40_nassa
+
+plot(tvar585_nassa, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Nassa for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+```{r ssp585-tete}
+tn585.40_tete<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(tete)%>%raster::mask(tete)
+tx585.40_tete<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(tete)%>%raster::mask(tete)
+tmn585.40_tete<-(tn585.40_tete+tx585.40_tete)/2
+#plot(tmn585.40_tete)
+tvar585_tete<-basetete-tmn585.40_tete
+
+plot(tvar585_tete, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean temperature change (C) for Tete for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+```{r ssp585-zambezia}
+tn585.40_zambezia<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmin585/wc2.1_2.5m_tmin_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(zambezia)%>%raster::mask(zambezia)
+tx585.40_zambezia<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/tmax585/wc2.1_2.5m_tmax_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(zambezia)%>%raster::mask(zambezia)
+tmn585.40_zambezia<-(tn585.40_zambezia+tx585.40_zambezia)/2
+#plot(tmn585.40_zambezia)
+tvar585_zambezia<-basezambezia-tmn585.40_zambezia
+
+plot(tvar585_zambezia, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+
+Fig. xx Mean temperature change (C) for Zambezia for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model
+
+ 
+
+### Projecções Futuras da Precipitação
+
+As variações da precipitação não são tão claras como as da temperatura. A gama de projecções de precipitação resultantes de diferentes modelos é grande e abrange mudanças negativas e positivas. Há indicações de variações entre -15 a + 20 mm por mês, ou -15% a + 34% (Mcsweeney et al., 2010). Contudo, os modelos mostram mais coerência nas projecções sazonais, indicando redução das chuvas na estação seca, isto é, no período de Junho a Agosto (JJA) e de Setembro a Novembro (SON). Esta redução é compensada parcialmente pelo aumento das chuvas na estação chuvosa, no período de Dezembro a Fevereiro (DJF), com maior expressão no norte de Moçambique (Mcsweeney et al., 2010). Em geral, as projecções de precipitação não indicam mudanças substanciais na precipitação anual, mas sim na mudança dos padrões de precipitação (Figura 1.11).
+
+![Figura 1.11: Padrões espaciais das médias mensais de precipitação no período de setembro a novembro projectada para os anos 2030, 2060 e 2090 (Adaptado de Mcsweeney et al., 2010).](images/padroes especiais.png)  
+
+
+
+```{r pr-base, include=FALSE, cache=TRUE}
+wc.prec<-getData("worldclim", var='prec', res=2.5)
+sl.prec<-raster::crop(wc.prec,moz0)%>%raster::mask(moz0)
+basepr<-sum(sl.prec)/12
+plot(basepr)
+
+#admin1
+cabo.pr<-raster::crop(wc.prec,cabo)%>%raster::mask(cabo)
+prbasecabo<-sum(cabo.pr)/12
+
+sofala.pr<-raster::crop(wc.prec,sofala)%>%raster::mask(sofala)
+prbasesofala<-sum(sofala.pr)/12
+
+gaza.pr<-raster::crop(wc.prec,gaza)%>%raster::mask(gaza)
+prbasegaza<-sum(gaza.pr)/12
+
+inbane.pr<-raster::crop(wc.prec,inbane)%>%raster::mask(inbane)
+prbaseinbane<-sum(inbane.pr)/12
+
+manica.pr<-raster::crop(wc.prec,manica)%>%raster::mask(manica)
+prbasemanica<-sum(manica.pr)/12
+
+maputo.pr<-raster::crop(wc.prec,maputo)%>%raster::mask(maputo)
+prbasemaputo<-sum(maputo.pr)/12
+
+map.city.pr<-raster::crop(wc.prec,map.city)%>%raster::mask(map.city)
+prbasemap.city<-sum(map.city.pr)/12
+
+nampula.pr<-raster::crop(wc.prec,nampula)%>%raster::mask(nampula)
+prbasenampula<-sum(nampula.pr)/12
+
+nassa.pr<-raster::crop(wc.prec,nassa)%>%raster::mask(nassa)
+prbasenassa<-sum(nassa.pr)/12
+
+tete.pr<-raster::crop(wc.prec,tete)%>%raster::mask(tete)
+prbasetete<-sum(tete.pr)/12
+
+zambezia.pr<-raster::crop(wc.prec,zambezia)%>%raster::mask(zambezia)
+prbasezambezia<-sum(zambezia.pr)/12
+```
+
+#### ssp126
+```{r pr126-national}
+pr126.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+#plot(pr126.40)
+prvar126<-basepr-pr126.40
+plot(prvar126, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=T)
+
+```
+ 
+Fig. 5a. Precipitation (annual mean) for Mozambique for 2020 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (SSP585). BCC-CSM2-MR Model. 
+
+
+```{r pr126-cabo}
+pr126.40_cabo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(cabo)%>%raster::mask(cabo)
+
+prvar126_cabo<-prbasecabo-pr126.40_cabo
+plot(prvar126_cabo, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+  
+Fig. 4b. Mean precipitation change (C) for Cabo Delgado for 2020 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model.
+
+```{r pr126-sofala}
+pr126.40_sofala<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(sofala)%>%raster::mask(sofala)
+
+prvar126_sofala<-prbasesofala-pr126.40_sofala
+plot(prvar126_sofala, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. 4b. Mean precipitation change (C) for Sofala for 2021 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model.  
+
+
+```{r pr126-gaza}
+pr126.40_gaza<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(gaza)%>%raster::mask(gaza)
+
+#plot(pr126.40_gaza)
+prvar126_gaza<-prbasegaza-pr126.40_gaza
+
+plot(prvar126_gaza, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Gaza for 2021 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model 
+
+
+```{r pr126-inbane}
+pr126.40_inbane<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(inbane)%>%raster::mask(inbane)
+
+#plot(pr126.40_inbane)
+prvar126_inbane<-prbaseinbane-pr126.40_inbane
+
+plot(prvar126_inbane, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Inhambane for 2021 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model 
+
+
+```{r pr126-manica}
+pr126.40_manica<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(manica)%>%raster::mask(manica)
+
+#plot(pr126.40_manica)
+prvar126_manica<-prbasemanica-pr126.40_manica
+
+plot(prvar126_manica, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Manica for 2021 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model 
+
+
+```{r pr126-maputo}
+pr126.40_maputo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(maputo)%>%raster::mask(maputo)
+
+#plot(pr126.40_maputo)
+prvar126_maputo<-prbasemaputo-pr126.40_maputo
+
+plot(prvar126_maputo, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Maputo for 2021 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model 
+
+
+```{r pr126-map.city}
+pr126.40_map.city<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(map.city)%>%raster::mask(map.city)
+
+#plot(pr126.40_map.city)
+prvar126_map.city<-prbasemap.city-pr126.40_map.city
+
+plot(prvar126_map.city, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for  Maputo City for 2021 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model 
+
+
+```{r pr126-nampula}
+pr126.40_nampula<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(nampula)%>%raster::mask(nampula)
+
+#plot(pr126.40_nampula)
+prvar126_nampula<-prbasenampula-pr126.40_nampula
+
+plot(prvar126_nampula, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Nampula for 2021 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model 
+
+```{r pr126-nassa}
+pr126.40_nassa<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(nassa)%>%raster::mask(nassa)
+
+#plot(pr126.40_nassa)
+prvar126_nassa<-prbasenassa-pr126.40_nassa
+
+plot(prvar126_nassa, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Nassa for 2021 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model 
+
+```{r pr126-tete}
+pr126.40_tete<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(tete)%>%raster::mask(tete)
+
+#plot(pr126.40_tete)
+prvar126_tete<-prbasetete-pr126.40_tete
+
+plot(prvar126_tete, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Tete for 2021 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model 
+
+```{r pr126-zambezia}
+pr126.40_zambezia<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr126/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp126_2021-2040.tif")%>%raster::crop(zambezia)%>%raster::mask(zambezia)
+
+#plot(pr126.40_zambezia)
+prvar126_zambezia<-prbasezambezia-pr126.40_zambezia
+
+plot(prvar126_zambezia, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Zambezia for 2021 – 2040 compared to reference period 1971 – 2000 for the low emissions scenario (ssp126). BCC-CSM2-MR Model  
+
+#### ssp245
+
+```{r pr245-national}
+pr245.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+#plot(pr245.40)
+prvar245<-basepr-pr245.40
+plot(prvar245, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=T)
+```
+
+Fig. 5b. Precipitation (annual mean) for Mozambique for 2020 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (SSP245). BCC-CSM2-MR Model.
+
+
+```{r pr245-cabo}
+pr245.40_cabo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(cabo)%>%raster::mask(cabo)
+
+prvar245_cabo<-prbasecabo-pr245.40_cabo
+plot(prvar245_cabo, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+  
+Fig. 4b. Mean precipitation change (C) for Cabo Delgado for 2020 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model.
+
+```{r pr245-sofala}
+pr245.40_sofala<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(sofala)%>%raster::mask(sofala)
+
+prvar245_sofala<-prbasesofala-pr245.40_sofala
+plot(prvar245_sofala, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. 4b. Mean precipitation change (C) for maputo for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model.  
+
+
+```{r pr245-gaza}
+pr245.40_gaza<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(gaza)%>%raster::mask(gaza)
+
+#plot(pr245.40_gaza)
+prvar245_gaza<-prbasegaza-pr245.40_gaza
+
+plot(prvar245_gaza, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Gaza for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+
+```{r pr245-inbane}
+pr245.40_inbane<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(inbane)%>%raster::mask(inbane)
+
+#plot(pr245.40_inbane)
+prvar245_inbane<-prbaseinbane-pr245.40_inbane
+
+plot(prvar245_inbane, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Inhambane for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+
+```{r pr245-manica}
+pr245.40_manica<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(manica)%>%raster::mask(manica)
+
+#plot(pr245.40_manica)
+prvar245_manica<-prbasemanica-pr245.40_manica
+
+sf_manica<-st_as_sf(manica)
+plot(prvar245_manica, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Manica for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+
+```{r pr245-maputo}
+pr245.40_maputo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(maputo)%>%raster::mask(maputo)
+
+#plot(pr245.40_maputo)
+prvar245_maputo<-prbasemaputo-pr245.40_maputo
+
+sf_maputo<-st_as_sf(maputo)
+plot(prvar245_maputo, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Maputo for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+
+```{r pr245-map.city}
+pr245.40_map.city<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(map.city)%>%raster::mask(map.city)
+
+#plot(pr245.40_map.city)
+prvar245_map.city<-prbasemap.city-pr245.40_map.city
+
+sf_map.city<-st_as_sf(map.city)
+plot(prvar245_map.city, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for  Maputo City for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+
+```{r pr245-nampula}
+pr245.40_nampula<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(nampula)%>%raster::mask(nampula)
+
+#plot(pr245.40_nampula)
+prvar245_nampula<-prbasenampula-pr245.40_nampula
+
+sf_nampula<-st_as_sf(nampula)
+plot(prvar245_nampula, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Nampula for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+```{r pr245-nassa}
+pr245.40_nassa<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(nassa)%>%raster::mask(nassa)
+
+#plot(pr245.40_nassa)
+prvar245_nassa<-prbasenassa-pr245.40_nassa
+
+sf_nassa<-st_as_sf(nassa)
+plot(prvar245_nassa, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Nassa for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+```{r pr245-tete}
+pr245.40_tete<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(tete)%>%raster::mask(tete)
+
+#plot(pr245.40_tete)
+prvar245_tete<-prbasetete-pr245.40_tete
+
+sf_tete<-st_as_sf(tete)
+plot(prvar245_tete, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Tete for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model 
+
+```{r pr245-zambezia}
+pr245.40_zambezia<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr245/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp245_2021-2040.tif")%>%raster::crop(zambezia)%>%raster::mask(zambezia)
+
+pr245.40_zambezia<-(pr245.40_zambezia+tx245.40_zambezia)/2
+#plot(pr245.40_zambezia)
+prvar245_zambezia<-prbasezambezia-pr245.40_zambezia
+
+sf_zambezia<-st_as_sf(zambezia)
+plot(prvar245_zambezia, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Zambezia for 2021 – 2040 compared to reference period 1971 – 2000 for the medium emissions scenario (ssp245). BCC-CSM2-MR Model
+
+```{r pr370}
+#pr370.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr370/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp370_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+#plot(pr370.40)
+#prvar370<-basepr-pr370.40
+#plot(prvar370)
+```
+
+#### ssp585
+```{r pr-585-national}
+pr585.40<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(moz0)%>%raster::mask(moz0)
+#plot(pr585.40)
+prvar585<-basepr-pr585.40
+plot(prvar585, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. 5c. Precipitation (annual mean) for Mozambique for 2020 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (SSP585). BCC-CSM2-MR Model.  
+
+
+```{r pr585-cabo}
+pr585.40_cabo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(cabo)%>%raster::mask(cabo)
+
+prvar585_cabo<-prbasecabo-pr585.40_cabo
+plot(prvar585_cabo, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+  
+Fig. 4b. Mean precipitation change (C) for Cabo Delgado for 2020 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model.
+
+```{r pr585-sofala}
+pr585.40_sofala<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(sofala)%>%raster::mask(sofala)
+
+prvar585_sofala<-prbasesofala-pr585.40_sofala
+plot(prvar585_sofala, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. 4b. Mean precipitation change (C) for maputo for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model.  
+
+
+```{r pr585-gaza}
+pr585.40_gaza<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(gaza)%>%raster::mask(gaza)
+
+#plot(pr585.40_gaza)
+prvar585_gaza<-prbasegaza-pr585.40_gaza
+
+sf_gaza<-st_as_sf(gaza)
+plot(prvar585_gaza, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Gaza for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+
+```{r pr585-inbane}
+pr585.40_inbane<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(inbane)%>%raster::mask(inbane)
+
+#plot(pr585.40_inbane)
+prvar585_inbane<-prbaseinbane-pr585.40_inbane
+
+sf_inbane<-st_as_sf(inbane)
+plot(prvar585_inbane, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Inhambane for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+
+```{r pr585-manica}
+pr585.40_manica<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(manica)%>%raster::mask(manica)
+
+#plot(pr585.40_manica)
+prvar585_manica<-prbasemanica-pr585.40_manica
+
+sf_manica<-st_as_sf(manica)
+plot(prvar585_manica, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Manica for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+
+```{r pr585-maputo}
+pr585.40_maputo<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(maputo)%>%raster::mask(maputo)
+
+#plot(pr585.40_maputo)
+prvar585_maputo<-prbasemaputo-pr585.40_maputo
+
+sf_maputo<-st_as_sf(maputo)
+plot(prvar585_maputo, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Maputo for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+
+```{r pr585-map.city}
+pr585.40_map.city<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(map.city)%>%raster::mask(map.city)
+
+#plot(pr585.40_map.city)
+prvar585_map.city<-prbasemap.city-pr585.40_map.city
+
+sf_map.city<-st_as_sf(map.city)
+plot(prvar585_map.city, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for  Maputo City for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+
+```{r pr585-nampula}
+pr585.40_nampula<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(nampula)%>%raster::mask(nampula)
+
+#plot(pr585.40_nampula)
+prvar585_nampula<-prbasenampula-pr585.40_nampula
+
+sf_nampula<-st_as_sf(nampula)
+plot(prvar585_nampula, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Nampula for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+```{r pr585-nassa}
+pr585.40_nassa<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(nassa)%>%raster::mask(nassa)
+
+#plot(pr585.40_nassa)
+prvar585_nassa<-prbasenassa-pr585.40_nassa
+
+sf_nassa<-st_as_sf(nassa)
+plot(prvar585_nassa, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Nassa for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+```{r pr585-tete}
+pr585.40_tete<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(tete)%>%raster::mask(tete)
+
+#plot(pr585.40_tete)
+prvar585_tete<-prbasetete-pr585.40_tete
+
+sf_tete<-st_as_sf(tete)
+plot(prvar585_tete, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Tete for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model 
+
+```{r pr585-zambezia}
+pr585.40_zambezia<-raster("C:/Workspace/RMardown_NAPS/Open-NAPs-Data/opennaps/WC_Fut_data/pr585/wc2.1_2.5m_prec_BCC-CSM2-MR_ssp585_2021-2040.tif")%>%raster::crop(zambezia)%>%raster::mask(zambezia)
+
+pr585.40_zambezia<-(pr585.40_zambezia+tx585.40_zambezia)/2
+#plot(pr585.40_zambezia)
+prvar585_zambezia<-prbasezambezia-pr585.40_zambezia
+
+sf_zambezia<-st_as_sf(zambezia)
+plot(prvar585_zambezia, xlab='Longitude', ylab='Latitude')
+plot(moz2, add=TRUE)
+```
+
+Fig. xx Mean precipitation change (C) for Zambezia for 2021 – 2040 compared to reference period 1971 – 2000 for the high emissions scenario (ssp585). BCC-CSM2-MR Model  
+
+
+## Climate change adaptation assessment
+
+```{r}
+library(flextable)
+library(magrittr)
+adapt<-readxl::read_excel("Tables_from_NAP.xlsx", 
+    sheet = "adpt-ass")
+t1<-flextable(adapt,col_keys = names(adapt),
+  cwidth = 3,
+  cheight = 0.01,
+  defaults = list(),
+   theme_booktabs())
+t2<-fontsize(t1,part = 'all', size = 8)
+t3<-border_outer(t2,part = 'all', border = NULL)
+t4<-border_inner(t3,part = 'all', border = NULL)
+t5<-bold(t4,part='header')
+t5
+```
+
+
+
+ 

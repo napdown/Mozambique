@@ -1,0 +1,116 @@
+# National circumstances
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning=FALSE)
+``` 
+
+a.	The national economic, environmental and social context
+Mozambique is located in the South Eastern Coast of Africa and borders with Tanzania (north), Malawi, Zambia and Zimbabwe (west) and South Africa and Swaziland (south). The country has an area of 799 380 Km², of which 13 000 km² are coastal and 786 380 Km² are terrestrial, with an eastern shoreline bathed by the indian ocean extending to 2700km1. According to the World population review 2017 report, Mozambique had an estimated population of 28,o11,000 milion people by 2015, which is significantly higher than the 2007 census figure of 21,397,000. Mozambique remains fairly sparsely populated with 29 people per square kilometer, which is 178th in the world. The north-central provinces of Nampula and Zambezia are the most populous regions of Mozambique and account for 45% of the total population. The annual growth rate as at 2015 is estimated at 2.91%2  
+
+Mozambique´s Gross Domestic Product (GDP) dropped to 3.3% in 2015, down from 6.6% in 2015. Official figures highlight a substantial slowdown in growth for most sectors, including negative growth in hotel and restaurant services and utilities. Foreign direct investments declined by 20% indicating a decline in confidence in the economy. The Mozambican Metical appreciated by 10% against the U.S. dollar between October 2016 and February 2017 as reduced liquidity and an adjusting trade balance began to take effect3.
+
+Mozambique´s rapid economic expansion over the past decades has had only a moderate impact on poverty reduction, and the geographical distribution of poverty remains largely unchanged. Climate change adds an additional stress to the development context in Mozambique, and threatens to undermine achievements made to date. The country is classified as Least Developed (LDC), and although its human development index has been improving in real terms, it is still ranked 181 out of 188 countries and territories in the 2015 Human Development report sharing the rank with South Sudan. Mozambique´s 2015 HDI of 0.418 is below the average of 0.497 for countries in the low human development group and below the average of 0.523 for countries in Sub-Saharan Africa. The most recent survey data that were publically available for Mozambique´s Multidimensional Poverty Index (MPI)4  for 2013/2014 reported that 70.2% of the population are multi-dimensionally poor while an additional 14.8%  live near multidimensional poverty. The MPI shows that income poverty only tells part of the story, because there are other forms deprivation that the poor suffer, and they affect their livelihoods.  
+
+According to the World Bank, the social economic indicators are also low for Mozambique with adult literacy rate at 56%, and average life expectancy at birth at 50.3 years. Mozambique faces other challenges such as increasing malnutrition and stunting. Malaria rem,ains the most common cause of death, responsible for 35% of child mortality and 29% for the general population. HIV prevalence among adults shows a downward trend, stabilizing at a relatively high rate of 11.5% . The social progress index for acess to improved sources of water  and sanitation ranks Mozambique 128th and 119th , respectively, out of 135 countries. Indeed, Mozambique has one of the lowest levels of water consumption in the world despite being endowed with a variety of water sources. As a responde to such challenges, the Mozambican authorities have considered the social sectors as top priorities and funding has been increasing for those sectors in general.  
+The Government of Mozambique (GoM) identifies the major environmental challenge as climatic shocksd and seasonal variability, overharvesting of marine and timber resources, and uncontrolled fires 5. Mozambique launched is National Climate Change Adaptation and Mitigation Strategy (NCCAMS), COVERING THE PERIOD 2013-2025 in November 2012 (MICOA,2012). Recognising the risk that climate change poses to development targets in the country, the strategy outlines Mozambique´s commitment to adaptation and mitigation, through low-carbon development and the green economy. The key objectives focus on making Mozambique resilient to the impacts of climate change, identifying and implementing opportunities for reduction of greenhouse gas emissions and creating the institutional and human capacity, as well as exploring opportunities for acess to technology.  
+
+_Source: MOZAMBIQUE, Country Climate Risk Assessment Report (2018)_
+
+
+O Governo de Moçambique identifica choques climáticos e variabilidade sazonal, a sobre exploração dos recursos marinhos e madeireiros, a gestão de resíduos sólidos, o saneamento do meio e as queimadas descontroladas como maiores desafios 
+
+b.	Key economic sectors and systems
+
+```{r}
+library(flextable)
+library(magrittr)
+sectors<-readxl::read_excel("Tables_from_NAP.xlsx", 
+    sheet = "economic-sectors")
+t1<-flextable(sectors,col_keys = names(sectors),
+  cwidth = 3,
+  cheight = 0.01,
+  defaults = list(),
+   theme_booktabs())
+t2<-fontsize(t1,part = 'all', size = 8)
+t3<-border_outer(t2,part = 'all', border = NULL)
+t4<-border_inner(t3,part = 'all', border = NULL)
+t5<-bold(t4,part='header')
+t5
+```
+
+
+
+c.	Climate change impacts: highlights of recent impacts
+
+*	Mozambique is particularly vulnerable to Climate Change (CC) due to its location  downstream of shared watersheds (Floods,  e.g. 2000 and 2013 Limpopo Basin; 2007 Zambeze, 2013 and 2019 Licungo Basin, etc.)
+*	Increase in the frequency and intensity of extreme climatic events, such as droughts, floods and tropical cyclones (recent cyclones with high impact: Idai and Keneth 2019, Eline in 2000, etc.)
+*	The long shoreline and the existence of extensive low-lands below sea level (sea level rise, storm surge, salt intrusion);. 
+*	The country’s vulnerability is also increased by its low adaptive capacity, poverty, limited investment in modern technology, and weaknesses in its infrastructure and social services, especially those related to health and sanitation (e.g. the malaria and cholera in 2019 after the cyclone Idai and Keneth in central and northern Mozambique). 
+*	These events result in the loss of human lives, crops, livestock and wildlife; the destruction of social and economic infrastructure; increased dependency on international support; food price increases; harm to human health and the environment; and the destruction of ecosystems. 
+*	CC represents a major barrier to the Government and its partners’ efforts to fight poverty and achieve the MDGs. (Government of Mozambique, 2012)  
+
+d.	Current relevant policies
+
+a.	Mandates guiding climate change adaptation planning
+b.	Data policy
+c.	Policies related to gender and vulnerable groups
+d.	Policies for relevant systems in the NAP (e.g. related to staple foods, energy, statements in the NDC, etc.)
+
+
+__Politicas__
+
+1.	Lei do ambiente
+2.	ENAMMC
+3.	Estratégia Nacional de Género ambiente e Mudanças Climáticas
+4.	NAPA 
+5.	Estratégia Nacional de REDD+
+6.	Plano Director de Reascentamentos
+7.	Programa Nacional de Desenvolvimento Sustentável
+8.	Estrategia Nacional de Gestao de Residuos Solidos
+9.	Estrategia Nacional de biodiversidade
+10.	Plano Nacional de Seca e Desertificação
+11.	Politica Nacional de Ordenamento Territorial
+12.	PLA’s
+13.	TNA
+14.	Segunda Comunicação Nacional
+15.	Primeira Comunicacao Nacional
+16.	NDC
+17.	Lei de gestão de calamidades
+18.	Lei de conservação
+19.	Estratégia Nacional de electrificação
+20.	Politica e estratégia de energias novas e renováveis
+21.	PEDSA (Plano Estratégico de Desenvolvimento do Sector Agrário 
+22.	Politica da agricultura (Estratégia Nacional de irrigação)
+23.	Plano Sectorial da Agricultura 
+24.	PNISA (Plano Nacional Investimento do Sector Agrário)
+25.	Estratégia Nacional de Segurança Alimentar e Nutricional
+26.	Estratégia Nacional de Saúde Ambiental
+27.	Estratégia Nacional de Segurança Social Básica
+28.	Estratégia de Pescas
+29.	Plano Sectorial das pescas
+30.	Estratégia de Mangal
+31.	Plano sectorial de obras públicas
+32.	Politica Nacional de Recursos Hídricos
+33.	ENDe
+34.	PQG
+35.	Lei da Industria
+36.	Lei das Minas
+37.	Plano de Transportes
+38.	Plano Sectorial de Meteorologia
+
+```{r}
+library(flextable)
+library(magrittr)
+instruments<-readxl::read_excel("Tables_from_NAP.xlsx", 
+    sheet = "instruments")
+t1<-flextable(instruments,col_keys = names(instruments),
+  cwidth = 3,
+  cheight = 0.01,
+  defaults = list(),
+   theme_booktabs())
+t2<-fontsize(t1,part = 'all', size = 8)
+t3<-border_outer(t2,part = 'all', border = NULL)
+t4<-border_inner(t3,part = 'all', border = NULL)
+t5<-bold(t4,part='header')
+t5
+```

@@ -1,0 +1,17 @@
+"0","library(flextable)"
+"0","library(magrittr)"
+"0","INAM<-readxl::read_excel(""Tables_from_NAP.xlsx"", "
+"0","    sheet = ""INAM-obs"")"
+"2","New names:
+* `` -> ...2
+"
+"0","t1<-flextable(INAM,col_keys = names(INAM),"
+"0","  cwidth = 3,"
+"0","  cheight = 0.01,"
+"0","  defaults = list(),"
+"0","   theme_booktabs())"
+"0","t2<-fontsize(t1,part = 'all', size = 8)"
+"0","t3<-border_outer(t2,part = 'all', border = NULL)"
+"0","t4<-border_inner(t3,part = 'all', border = NULL)"
+"0","t5<-bold(t4,part='header')"
+"0","t5"
