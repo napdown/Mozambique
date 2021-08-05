@@ -802,6 +802,8 @@ t5
 Os eventos climáticos extremos ocorridos em Moçambique em 2000 e nas épocas chuvosas de 2005/6 a 2017/18 afectaram cerca de 4,074,606 pessoas, causaram ferimentos a 885 pessoas e 1,114 óbitos. Cerca de 50% de afectados, feridos e óbitos resultaram da ocorrência do Ciclone HUDAH, e importa referir que os ciclones tropicais são eventos que provocam maiores impactos na dimensão humana.
 Estes impactos constituem um retrocesso no processo de redução da pobreza que é a prioridade dos Governos dos países em vias de desenvolvimento e aumentam a dependência pela ajuda internacional. Neste contexto, é de alta prioridade a avaliação da vulnerabilidade dos sectores sociais e económicos mais importantes e a identificação de medidas de adaptação.
 
+<!--Suggestion: include vulnerability and impact analysis for other key sectors, such as water resources, health, infrastructure, biodiversity, and so on-->
+
 __Agricultura__
 
 De acordo com os balanços das épocas chuvosas, o sector de agricultura é vulnerável aos eventos de estiagem e secas, cheias e inundações, ventos fortes, ciclones tropicais incluindo pragas (vide a Tabela 3.3). Estes eventos resultam em áreas de culturas afectadas e/ou perdidas; morte e/ou desaparecimento de animais domésticos, com destaque para o gado bovino, caprino, suíno, ovino e aves; destruição de infra-estruturas agrárias e de maneio dos animais; perda de áreas de pastagem, afectando os agricultores e suas famílias.
