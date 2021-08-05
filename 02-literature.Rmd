@@ -16,6 +16,7 @@ The Government of Mozambique (GoM) identifies the major environmental challenge 
 
 _Source: MOZAMBIQUE, Country Climate Risk Assessment Report (2018)_
 
+<!-- Suggestion: include further information related to Mozambique's national circumstances. The SNC, for example, has a more comprehensive chapter on national circumstances and some information could be used for the NAP-->
 
 O Governo de Moçambique identifica choques climáticos e variabilidade sazonal, a sobre exploração dos recursos marinhos e madeireiros, a gestão de resíduos sólidos, o saneamento do meio e as queimadas descontroladas como maiores desafios 
 
@@ -50,6 +51,7 @@ c.	Climate change impacts: highlights of recent impacts
 *	CC represents a major barrier to the Government and its partners’ efforts to fight poverty and achieve the MDGs. (Government of Mozambique, 2012)  
 
 d.	Current relevant policies
+<!--Note: there are other topics in the document for relevant policies, plans and strategies (page 12 and 54)-->
 
 a.	Mandates guiding climate change adaptation planning
 b.	Data policy
